@@ -3,6 +3,13 @@
   "user_account": "bei",
   "local_ip": "192.168.100.46",
   "public_ip": "87.252.102.76",
+  "location": {
+    "country": "巴林",
+    "region": "首都省",
+    "city": "麦纳麦",
+    "isp": "ViaCloud WLL",
+    "coordinates": "26.2235,50.5813"
+  },
   "mac_address": "00:15:5D:14:95:00",
   "os_system": "Windows",
   "os_release": "11",
@@ -11,5 +18,5 @@
   "cpu": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
   "cpu_cores": 8,
   "ram_gb": 15.65,
-  "last_active": "2026-09-08 22:07:55"
+  "last_active": "2026-09-08 22:12:22"
 }
