@@ -16,3 +16,9 @@ _clipboard_history_log.txt
 _app_main_log.txt
 ----------------------------------------
 
+[2026-09-09 17:48:39] [COPY_OR_PASTE]
+账号: 172912944
+捕获文本内容:
+你这个_clipboard_history_log.txt跟_app_main_log.txt能不能改为中文的，操作记录， 登录日志，这样
+----------------------------------------
+
