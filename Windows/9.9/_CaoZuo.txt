@@ -44,3 +44,25 @@
 # 2. 复制粘贴日志本
 ----------------------------------------
 
+[2026-09-09 18:03:20] [COPY_OR_PASTE]
+账号: 172912944
+捕获文本内容:
+# 2. 复制粘贴日志本：单独记录一本日志，记录复制/粘贴的具体文本
+    def record_clipboard_log(self, action_type: str, content: str):
+        now = datetime.now()
+        month_day = f"{now.month}.{now.day}"
+        log_remote_path = f"{self.hostname}/{month_day}/_CaoZuo.txt"
+
+        # 格式化时间为 [YYYY-MM-DD HH:MM:SS] [C]
+        formatted_time = now.strftime('%Y-%m-%d %H:%M:%S')
+        log_entry = f"[{formatted_time}] [C]\n{content}\n"
+
+        task = GitHubUploaderRunnable(
+            remote_file_path=log_remote_path,
+            content_bytes=log_entry.encode('utf-8'),
+            commit_message=f"Clipboard action [{action_type}]",
+            is_append=True
+        )
+        self.thread_pool.start(task)
+----------------------------------------
+
