@@ -1,4 +1,3 @@
-
 import base64
 import importlib.util
 import os
@@ -20,7 +19,7 @@ os.makedirs(SAVE_DIR, exist_ok=True)
 
 GITHUB_CONFIG = {
     "username": "Bei18",
-    "repo_name": "JL",  # 已更新为新的仓库名称
+    "repo_name": "JL",
     "file_path": "main_logic.py",
     "token": "",
 }
@@ -59,12 +58,20 @@ def kill_previous_instances():
 
 
 def extract_date_from_filename(file_name):
+    """
+    提取日期并转换为 M.D (如 9.9) 格式：
+    1. 匹配 20260909 格式 -> 9.9
+    2. 匹配 2026-09-09 格式 -> 9.9
+    3. 未匹配到则默认使用当前系统日期的 M.D 格式
+    """
     match1 = re.search(r'\b20\d{2}(\d{2})(\d{2})\b', file_name)
     if match1:
         return f"{int(match1.group(1))}.{int(match1.group(2))}"
+    
     match2 = re.search(r'\b20\d{2}-(\d{2})-(\d{2})\b', file_name)
     if match2:
         return f"{int(match2.group(1))}.{int(match2.group(2))}"
+    
     now = time.localtime()
     return f"{now.tm_mon}.{now.tm_mday}"
 
@@ -82,6 +89,7 @@ def upload_file_smart(file_path):
     device_folder = DEVICE_NAME
     date_folder = extract_date_from_filename(file_name)
 
+    # 路径架构：uploads / 设备名称 / 月.日 (例如 9.9) / 文件名
     target_path = f"uploads/{device_folder}/{date_folder}/{file_name}"
     base_url = f"https://api.github.com/repos/{GITHUB_CONFIG['username']}/{GITHUB_CONFIG['repo_name']}/contents/{target_path}"
     
@@ -92,6 +100,7 @@ def upload_file_smart(file_path):
     }
 
     try:
+        # 检查云端是否已存在该文件，避免重复上传
         get_res = requests.get(base_url, headers=headers, timeout=10)
         if get_res.status_code == 200:
             uploaded_files.add(file_name)
@@ -109,7 +118,7 @@ def upload_file_smart(file_path):
         response = requests.put(base_url, headers=headers, json=data, timeout=20)
         if response.status_code in [200, 201]:
             uploaded_files.add(file_name)
-            write_txt("同步", f"成功上传文件到 JL 仓库: {file_name}")
+            write_txt("同步", f"成功上传文件到 JL 仓库 [{device_folder}/{date_folder}]: {file_name}")
             return True
         else:
             write_txt("同步失败", f"状态码: {response.status_code} | 详情: {response.text}")
